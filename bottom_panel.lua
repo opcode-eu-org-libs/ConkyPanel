@@ -24,7 +24,7 @@ GPU   = { W=72,   H=55, X=CPU.X+CPU.W+1,    Y=0,  TOOLTIP_TIME=5 }
 NET   = { W=72,   H=55, X=GPU.X+GPU.W+1,    Y=0,  TOOLTIP_TIME=8 }
 CLOCK = { W=155,  H=52, X=NET.X+NET.W+5,    Y=0,  TOOLTIP_TIME=5 }
 
-WIN_WIDTH = 670
+WIN_WIDTH = 669
 WIN_HEIGHT = 58
 WIN_HEIGHT_BIG_MODE = 400
 
@@ -38,6 +38,7 @@ end
 ------------------------
 
 require "cairo"
+pcall(require, 'cairo_xlib') -- for cairo_xlib_surface_create in conky 1.24.0
 
 package.path = debug.getinfo(1).source:match("@?(.*/)") .. "?.lua;" .. package.path
 
@@ -63,6 +64,8 @@ te = nil
 win_width = nil
 win_height = nil
 
+xdg_session_type = os.getenv("XDG_SESSION_TYPE")
+
 ---------------------------------
 ---   Conky hooks functions   ---
 ---------------------------------
@@ -87,14 +90,25 @@ function conky_draw()
 	end
 	
 	-- set window size
-	if not win_width or updates < 3 then
+	if updates < 3 then
 		resize_window(WIN_WIDTH, WIN_HEIGHT)
 	end
 	
 	-- cairo surface
-	local cs = cairo_xlib_surface_create(
-		conky_window.display, conky_window.drawable, conky_window.visual, win_width, win_height
-	)
+	local cs = nil
+	local cs_own = false
+	if conky_surface then
+		cs = conky_surface() -- for conky 1.24.0
+	end
+	if cairo_xlib_surface_create and not cs then
+		cs = cairo_xlib_surface_create( conky_window.display, conky_window.drawable, conky_window.visual, win_width, win_height ) -- for conky 1.18.3 and 1.24.0 on X11 due to BUG https://github.com/brndnmtthws/conky/issues/2388
+		cs_own = true
+	end
+	
+	if not cs then
+		print("ERROR: No drawing surface")
+		return
+	end
 	
 	local cr = cairo_create(cs)
 	
@@ -134,10 +148,13 @@ function conky_draw()
 	cairo_text_extents_t:destroy(te)
 	
 	cairo_destroy(cr)
-	cairo_surface_destroy(cs)
+	if cs_own then
+		-- do not destroy result of conky_surface(), but destroy result of cairo_xlib_surface_create
+		cairo_surface_destroy(cs)
+	end
 end
 
-function event_handler(event)
+function conky_event_handler(event)
 	if clock_event(event) then
 		return true
 	elseif event.type == "mouse_move" then
@@ -158,12 +175,13 @@ function event_handler(event)
 		else
 			tooltip_visible = nil
 		end
-	elseif event.type == "button_down" then
-		if win_height == WIN_HEIGHT then
-			resize_window(WIN_WIDTH, WIN_HEIGHT_BIG_MODE)
-		else
-			resize_window(WIN_WIDTH, WIN_HEIGHT)
-		end
+-- TODO / WIP: BROKEN in 1.24 on X11, lack of xdotool on Wayland
+-- 	elseif event.type == "button_up" then
+-- 		if win_height == WIN_HEIGHT then
+-- 			resize_window(WIN_WIDTH, WIN_HEIGHT_BIG_MODE)
+-- 		else
+-- 			resize_window(WIN_WIDTH, WIN_HEIGHT)
+-- 		end
 	else
 		tooltip_visible = nil
 	end
@@ -175,7 +193,6 @@ end
 ----------------
 
 clock_set_tz(2)
-
 
 
 -- TODO / WIP

@@ -23,16 +23,15 @@ function clock_event(event)
 	if (event.y > CLOCK.Y and event.x > CLOCK.X and event.x < CLOCK.X + CLOCK.W) then
 		if event.type == "mouse_move" then
 			tooltip_show(CLOCK, event.x, event.y)
-		elseif event.type == "button_down" then
+		elseif event.type == "button_up" then
 			tooltip_until = os.time() + 2
 			os.execute([[
-				wl=$(xdotool search --name 'ConkyCalendarWidget')
-				if [ "$wl" != "" ]; then
-					for w in $wl; do
-						kill $(xdotool getwindowpid $w)
-					done;
+				cmd='yad --calendar --show-weeks --posx=-55 --posy=-60 --on-top --undecorated --no-buttons --skip-taskbar --title ConkyCalendarWidget'
+				pids=$(ps -o pid= -C "$cmd")
+				if [ "$pids" != "" ]; then
+					kill $pids
 				else
-					yad --calendar --show-weeks --posx=-55 --posy=-60 --close-on-unfocus --undecorated --no-buttons --skip-taskbar --title ConkyCalendarWidget &
+					$cmd &
 				fi
 			]])
 		elseif event.type == "mouse_scroll" then

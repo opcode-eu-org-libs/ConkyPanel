@@ -208,16 +208,19 @@ end
 function resize_window(width, height)
 	win_width = width
 	win_height = height
-	os.execute(
-		"win_width=" .. tostring(win_width) .. "; win_height=" .. tostring(win_height) .. [[;
-			xdotool getdisplaygeometry | (
-				read dw dh
-				w=$(xdotool search --class ConkyBottomPanel)
-				xdotool windowsize $w $win_width $win_height
-				xdotool windowmove $w $(($dw - $win_width)) $(($dh - $win_height))
-			)
-		]]
-	)
+	if xdg_session_type == "x11" then
+		os.execute(
+			"win_width=" .. tostring(win_width) .. "; win_height=" .. tostring(win_height) .. [[;
+				xdotool getdisplaygeometry | (
+					read dw dh
+					w=$(xdotool search --class ConkyBottomPanel)
+					xdotool windowsize $w $win_width $win_height
+					xdotool windowmove $w $(($dw - $win_width)) $(($dh - $win_height))
+				)
+			]]
+		)
+	-- else TODO/WIP wayland solution for runtime size change
+	end
 end
 
 

@@ -34,6 +34,8 @@ function draw_gpu_tooltip(cr, conf)
 end
 
 function draw_term(cr, conf)
+	if hwmon.cpu.temp.max == nil then return end -- don't draw before set min / max values
+	
 	set_default_font(cr)
 	
 	if hwmon.ram.temp.max > 50 then
@@ -75,6 +77,11 @@ function draw_term(cr, conf)
 	cairo_show_text(cr, " MB: " .. tostring(hwmon.mb.temp.min) .. "°C  " .. tostring(mb_max) .. "°C")
 end
 
+function fmt_if_val(prefix, point, surfix)
+	if point == nil then return "" end
+	return prefix .. tostring(point.val) .. surfix
+end
+
 function draw_term_tooltip(cr, conf)
 	if not is_tooltip_visible(conf) then return end
 	
@@ -83,8 +90,9 @@ function draw_term_tooltip(cr, conf)
 			.. "     CPU: ".. tostring(hwmon.cpu.temp.ccd1.val) .. "°C  " .. tostring(hwmon.cpu.temp.ccd2.val) .. "°C  " .. tostring(hwmon.cpu.temp.gpu_edge.val) .. "°C  " .. tostring(hwmon.cpu.temp.ctl.val) .. "°C  ",
 		"MDIO: " .. tostring(hwmon.mdio.temp.c1.val) .. "°C     SDA: " .. tostring(hwmon.disks.temp.sda.val) .. "°C"
 			.. "     RAM: " .. tostring(hwmon.ram.temp.c1.val) .. "°C  " .. tostring(hwmon.ram.temp.c2.val) .. "°C",
-		"MB: sysin: " .. tostring(hwmon.mb.temp.sysin.val) .."°C  cpuin: " .. tostring(hwmon.mb.temp.cpuin.val) .."°C  tsi0: " .. tostring(hwmon.mb.temp.tsi0.val) .. "°C aux: " .. tostring(hwmon.mb.temp.auxtin1.val) .. "°C  "
-			.. tostring(hwmon.mb.temp.auxtin2.val) .. "°C  " .. tostring(hwmon.mb.temp.auxtin3.val) .. "°C  " .. tostring(hwmon.mb.temp.auxtin4.val) .. "°C  " .. tostring(hwmon.mb.temp.auxtin5.val) .. "°C",
+		"MB: " .. fmt_if_val("sysin: ", hwmon.mb.temp.sysin, "°C  ") .. fmt_if_val("cpuin: ", hwmon.mb.temp.cpuin, "°C ") .. fmt_if_val("tsi0: ", hwmon.mb.temp.tsi0, "°C ")
+			.. "aux: " .. fmt_if_val("", hwmon.mb.temp.auxtin1, "°C ") .. fmt_if_val("", hwmon.mb.temp.auxtin2, "°C ") .. fmt_if_val("", hwmon.mb.temp.auxtin3, "°C ")
+			.. fmt_if_val("", hwmon.mb.temp.auxtin4, "°C ") .. fmt_if_val("", hwmon.mb.temp.auxtin5, "°C")
 	}
 	tooltip_draw(cr, str)
 end
